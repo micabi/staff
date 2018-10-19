@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>カートの仕組み</title>
+	<link rel="stylesheet" href="../css/kaisetsu.css" type="text/css">
+</head>
+<body>
+	<div id="header">
+		<h2>カートの仕組み</h2>
+	</div>
+	<!-- /#header -->
+
+	<div id="container">
+	<div id="content">
+	<p><span class="red bold">※重要！</span><span class="udl">cart_look.phpにおいて</span>$cartと$kazuはペアになっている。</p>
+
+	<pre>
+		<ul>
+			<li>$cart = array(0 =&gt; '12', 1 =&gt; '45', 2 =&gt; '32', 3 =&gt; '55', 4 =&gt; '67',....);	// 商品コードの配列</li>
+			<li>$kazu = array(0 =&gt; '1', 1 =&gt; '1', 2 =&gt; '1', 3 =&gt; '1', 4 =&gt; '1',....);	// 購入数の配列</li>
+		</ul>
+	</pre>
+
+	<h3>配列要素の順</h3>
+	<p><span class="red">配列要素の順番は「カートに入れた順」。</span></p>
+
+	<p>インデックス番号が同じものは、同じ商品についての情報となる。<br>
+	$cart[4]と$kazu[4]は、「商品コード67の商品を1個」という意味になる。</p>
+
+	<p>つまり、n番目にカートに入れた商品について、商品情報と個数情報をまとめて扱える。</p>
+
+	<p>$cartと$kazuの配列要素の数はカートに入れる度に配列に追加されていくので、<br>
+	その要素の数ループを回せば一気に取り出せる。</p>
+
+
+
+	<h3>では、その他の情報（DBに入っているname・price・images）はどうするか？</h3>
+
+	<p>$cart（商品コード）と$kazu（購入数）はカートに入れた順番になっているが、<br>
+	DBに入っているname、price、imagesは、code（商品コード）を1個入れて1個取り出せるだけ。<br>
+	それを「カートに入れた順」を維持して表示したい。</p>
+
+	<p>foreach($cart as $key =&gt; $value){}のループ内では、<br>
+		$cartに入った商品コードを1つずつDBにリクエストし、<br>
+		$recにname、price、imagesを受け取っている。</p>
+
+	<pre>
+		<p>$rec = $stmt-&gt;fetch(PDO::FETCH_ASSOC);</p>
+	</pre>
+
+
+
+	<p>$recには次のようにDBから受け取った値が「カートに入れた順」に多次元配列となって入っている。</p>
+
+	<pre>
+		<ul>
+			<li>$rec = array(</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0=&gt; array(code=&gt; '15', name=&gt; '愛犬元気', price=&gt; '1500', images=&gt; 'abc.jpg'), // 1番目にいれた商品コード</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1=&gt; array(code=&gt; '24', name=&gt; 'ビスカル', price=&gt; '2000', images=&gt; 'def.jpg'), // 2番目にいれた商品コード</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2=&gt; array(code=&gt; '67', name=&gt; 'アイムス', price=&gt; '4500', images=&gt; 'ghi.jpg'), // 3番目にいれた商品コード</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3=&gt; array(code=&gt; '11', name=&gt; 'ビタミン', price=&gt; '1000', images=&gt; 'osj.jpg'), // 4番目にいれた商品コード</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4=&gt; array(code=&gt; 'n', name=&gt; 'ビスカル', price=&gt; '2000', images=&gt; 'def.jpg'), // n番目にいれた商品コード</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;....</li>
+			<li>);</li>
+		</ul>
+	</pre>
+
+	<p>name・price・imagesを取り出したい場合、それぞれ...</p>
+
+	<pre>
+		<ul>
+			<li>$product_name = $rec['name'];</li>
+			<li>$product_price = $rec['price'];</li>
+			<li>$product_image = $rec['images'];</li>
+		</ul>
+	</pre>
+
+	<p>で良いはず。しかしこれでは
+	最後にカートに入れた商品しか取り出せず、「カートに入れた順」が反映されない。<br>
+	「カートに入れた順」にするためには、</p>
+
+	<pre>
+		<ul>
+			<li>$product_name[] = $rec['name'];</li>
+			<li>$product_price[] = $rec['price'];</li>
+			<li>$product_image []= $rec['images'];	</li>
+		</ul>
+	</pre>
+
+	<p>と変数名に[]をつけて配列として格納する。</p>
+
+	<pre>
+		<p>$product_name = array(0 =&gt; '愛犬元気', 1 =&gt; 'ビスカル', 2 =&gt; 'アイムス', 3 =&gt; 'ビタミン',...);</p>
+	</pre>
+
+
+	<p>$product_name[0]はアイムス、$product_name[1]は愛犬元気と表現できる。<br>
+	この配列要素の順番は$cart、$kazuと対応して「カートに入れた順」である。</p>
+
+	<pre>
+		<ul>
+			<li>$cart = array(0 =&gt; '12', 1 =&gt; '45', 2 =&gt; '32', 3 =&gt; '55', 4 =&gt; '67',....);	商品コードの配列</li>
+			<li>$kazu = array(0 =&gt; '1', 1 =&gt; '1', 2 =&gt; '1', 3 =&gt; '1', 4 =&gt; '1',....);	購入数の配列</li>
+			<li>$product_name  = array(0 =&gt; '愛犬元気', 1 =&gt; 'ビスカル', 2 =&gt; 'アイムス', 3 =&gt; 'ビタミン',...);	商品名の配列</li>
+		</ul>
+	</pre>
+
+
+	<p>$cart[4]と$kazu[4]と$product_name[4]なら、「商品コード67の商品を1個、商品名...」というなる。<br>
+	n番目にカートに入れた商品についての情報がまとめて扱える。</p>
+
+
+	<p>$cart、$kazu、$product_name、$product_price、$product_imageの
+	要素数は全て同じで、全て「カートに入れた順」に並んでいる。</p>
+
+	<p>要素数を数えて、「カートに入れた順」にループを回せば...</p>
+
+	<pre>
+		<p>$max = count($cart);	// 要素の数</p>
+	</pre>
+
+	<br>
+
+	<pre>
+		<ul>
+			<li>for($i = 0; $i &lt; $max; $i++){</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo $product_name[i];	// i番目にカートにいれた商品名A</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo $product_price[i];	// i番目にカートにいれたAの価格</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo $product_image[i];	// i番目にカートにいれたAの画像</li>
+			<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo $kazu[i];	// i番目にカートにいれたAの購入数</li>
+			<li>}</li>
+		</ul>
+	</pre>
+
+	<p>カートに入れた順に表示できる。</p>
+
+	<p>カートに入れた順に、i番目のname、i番目のprice、i番目のimages、i番目の数量<br>
+	次のページでpostで受け取るために、name属性に名前をつける。name="'kazu'.$i"、name="'delete'.$i"</p>
+
+	<pre>
+	<ul>
+		<li>&lt;?php</li>
+		<li>for($i = 0; $i &lt; $max; $i++){</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo '商品名：'.$product_name[$i].'&lt;br /&gt;'; // $product_name[$i]は配列要素i番目のname</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo '価格：'.$product_price[$i].'円&lt;br /&gt;'; // $product_price[$i]は配列要素i番目のprice</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo '&lt;img src="../product/images/'.$product_image[$i].'" /&gt;&lt;br /&gt;'; // $product_image[$i]は配列要素i番目のimage</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$kazu = array(1, 1, 1, 1, 1,......); 何番目の要素でも値は1</li>
+		<li>}</li>
+		<li>?&gt;</li>
+	</ul>
+
+	<ul>
+		<li>&lt;?php for($i = 0; $i &lt; $max; $i++): ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;?php echo '&lt;p&gt;商品名：'.$product_name[$i].'&lt;br /&gt;'; ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;?php echo '価格：'.$product_price[$i].'円&lt;br /&gt;'; ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;?php echo '&lt;img src="../product/images/'.$product_image[$i].'" /&gt;&lt;/p&gt;'; ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;?php echo '&lt;p&gt;数量：'; ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;input type="text" name="kazu&lt;?php echo $i; ?&gt;" value="&lt;?php echo $kazu[$i]; ?&gt;" style="width: 30px;"&gt;個&lt;/p&gt;<!-- 購入数をpost --></li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;?php echo '&lt;p&gt;小計：'.$product_price[$i]*$kazu[$i].'円&lt;/p&gt;'; ?&gt;</li>
+		<li>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&gt;&lt;input type="checkbox" name="delete&lt;?php echo $i; ?&gt;"&gt;商品を削除する&lt;/p&gt;</li>
+		<li>&lt;?php endfor; ?&gt;</li>
+	</ul>
+	</pre>
+
+	<p>比較として、product_detail.phpでは、
+	商品コードを1つだけ渡すのでDBから取り出した$recの中身は、</p>
+
+	<pre>
+		<p>$rec = array(name =&gt; 'アイムス', price =&gt; '4500', images =&gt; 'iams.jpg');</p>
+	</pre>
+
+	<p>と通常の連想配列となっている。<br>
+	だから、<br>
+	$product_name = $rec['name'];</p>
+	<p>変数を配列にする必要はない。</p>
+
+
+	<p><span class="bold">ページをまたいで値を受け渡ししているのは、商品コード（code）と購入数量（$kazu）のみ。<br>
+	商品名・価格・画像は各ページで個別にSQLによってDBから受け取っている。</span></p>
+
+</div>
+<!-- /#content -->
+</div>
+<!-- /#container -->
+
+<div id="footer">
+	<p>Copyright&copy; Wataru Adachi</p>
+</div>
+<!-- /#footer -->
+
+
+</body>
+</html>
